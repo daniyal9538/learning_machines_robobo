@@ -340,3 +340,10 @@ class SimulationRobobo(Robobo):
                                         [],[],[],bytearray(),vrep.simx_opmode_blocking)
         )
         return ints[0]
+
+    def shuffle_obstacles(self):
+        vrep.unwrap_vrep(
+            vrep.simxCallScriptFunction(self._clientID, "Robobo_Scene_random", vrep.sim_scripttype_mainscript, "shuffle_obstacles",
+                                        [],[],[],bytearray(),vrep.simx_opmode_blocking)
+        )
+        return

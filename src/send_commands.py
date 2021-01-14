@@ -19,8 +19,9 @@ def terminate_program(signal_number, frame):
         sys.exit(1)
 
 def simulation(rob):
-    agent = Agent(rob=rob, n_episodes = 2, max_steps = 10)
-    agent.train()
+    agent = Agent(rob=rob, stuck_threshold = 0.05)
+    agent.train(filename = 'scene_1.npy', n_episodes = 2, max_steps = 2)
+    # agent.run(filename = 'scene_1.npy',iterations = 10)
     # rob.stop_world()
     # rob.play_simulation()
     # state = State(stuck_threshold=0.05, debug_print=False)
@@ -60,7 +61,7 @@ def simulation(rob):
                 
     #         #     sys.exit(1)
 
-    # rob.stop_world()
+    rob.stop_world()
 
 
 def main():

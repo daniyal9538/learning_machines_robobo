@@ -1,27 +1,31 @@
 import numpy as np
 from random import randint, uniform
 from actions import *
+import pandas as pd
 
 class Agent:
-    def __init__(self,rob, **args):
+    def __init__(self,rob,**args):
+        
         self.rob = rob
         self.state_variables = ['robot_position', 'sensor_state','stuck_state', 'sensor_data' ]
         self.previous_states = []
         self.previous_data = {}
         self.current_state =[]
         self.current_data = {}
-        self.stuck_threshold = args.get('stuck_threshold',0.05)
+        self.stuck_threshold = args.get('stuck_threshold',0.1)
         self.debug_print = args.get('debug_print', False)
         self.current_reward = 0
         self.reward_history = []
-        self.q_table = args.get('q_table',np.zeros(shape=(2,2,2,2,2,2,6)))
+        self.q_table = args.get('q_table',np.zeros(shape=(2,2,2,2,2,2,2,2,2,6)))
         self.alpha = args.get('alpha',0.3)
         self.gamma = args.get('gamme', 0.9)
-        self.n_episodes = args.get('n_episodes', 10)
+
         self.epsilon = args.get('epsilon', 0.4)
-        self.max_steps = args.get('max_steps', 50)
+
         self.current_action = None
         self.action_history = []
+        self.stuck_count = 0
+        self.learn = True
 
         for i in self.state_variables:
             self.previous_data[i] = []
@@ -49,7 +53,7 @@ class Agent:
     def generateGreedyMove(self):
         # state = np.array(self.current_state)
         candidate_values = self.q_table[tuple(self.current_state)]
-        return np.random.choice(np.flatnonzero(candidate_values == candidate_values.max()))
+        return np.argmax(candidate_values)
 
     def calculateQValue(self, max_q, old_q, reward):
         return ((1-self.alpha)*(old_q) + self.alpha*(reward + self.gamma*(max_q)-old_q))
@@ -61,6 +65,7 @@ class Agent:
         for i in self.state_variables:
             if i == 'stuck_state':
                 _state = self.isStuck()
+                self.stuck_count += _state
             else: 
                 _state = state.get(i, None)
             self.current_data[i] = _state
@@ -69,6 +74,8 @@ class Agent:
         self.current_state = [self.current_data['stuck_state']] + self.current_data['sensor_state']
         self.previous_states.append(self.current_data)
         self.generateRewards()
+        # print(self.current_reward)
+        # print(self.current_state)
         # self.updateQTable()
 
     def isStuck(self):
@@ -89,9 +96,13 @@ class Agent:
     def generateRewards(self):
         # reward for staying stuck -2
         # reward for having detected something in sensor -1
-        reward = self.current_data['stuck_state']*-2
-        reward += sum(self.current_data['sensor_state'])*-1
+        # print(self.current_state)
+        reward = self.current_state[0]*-2
+
+        reward += sum(self.current_state[1:])*-1
+    
         self.current_reward = reward
+        
         self.reward_history.append(reward)
 
     # def updateQTable(self, old_q, max_q, reward):
@@ -102,25 +113,39 @@ class Agent:
         
         next_move = self.generateMoveFromPolicy()
         self.executeMove(next_move)
-    
+
+    # def readState(self):
+    #     sensor_data = self.rob.read_irs()
+    #     current_data = {'robot_position':self.rob.position(),
+    #                         # 'sensor_state':sensor_input,
+    #                         'sensor_data':sensor_data,
+    #                         'action':move
+    #                         }
+    #     self.updateState(**current_data)
+
     def executeMove(self, move):
         old_state = self.current_state
         selectMove(self.rob, action = move)
-        sensor_data = self.rob.read_irs()[3:]
+        # self.readState()
+        sensor_data = self.rob.read_irs()
         current_data = {'robot_position':self.rob.position(),
                             # 'sensor_state':sensor_input,
                             'sensor_data':sensor_data,
                             'action':move
                             }
         self.updateState(**current_data)
-        new_state = self.current_state
-        reward = self.current_reward
-        old_q = self.q_table[tuple(old_state)][move]
-        max_q = np.max(self.q_table[tuple(new_state)])
-        self.q_table[tuple(old_state)][move] = self.calculateQValue(max_q=max_q, old_q=old_q, reward=reward)
+
+        if self.learn == True:
+            new_state = self.current_state
+            reward = self.current_reward
+            # print(old_state,move)
+            old_q = self.q_table[tuple(old_state)][move]
+            max_q = np.max(self.q_table[tuple(new_state)])
+            
+            self.q_table[tuple(old_state)][move] = self.calculateQValue(max_q=max_q, old_q=old_q, reward=reward)
 
 
-    def initEnv(self):
+    def initEnv(self, shuffle=False):
         self.previous_states = []
         self.previous_data = {}
         self.current_state =[]
@@ -132,24 +157,69 @@ class Agent:
         for i in self.state_variables:
             self.previous_data[i] = []
         self.rob.stop_world()
+
         self.rob.play_simulation()
+        print('Environment Reset')
+        if shuffle:
+            self.rob.shuffle_obstacles()
+        self.current_state = [0,0,0,0,0,0,0,0,0]
+        self.stuck_count = 0
 
-
-    def train(self):
-        for _ in range(self.n_episodes):
-            self.initEnv()
+    def train(self, filename, n_episodes, max_steps):
+        data = []
+        for _ in range(n_episodes):
+            print(f'Episode {_}')
+            self.initEnv(shuffle=False)
             first_move = self.generateRandomMove()
             self.executeMove(first_move)
-            print(f'Episode {_}: ', end = '')
-            for i in range(self.max_steps):
+            print(first_move,self.current_state, self.current_reward)
+            
+            for i in range(max_steps):
 
                 next_move = self.generateMoveFromPolicy()
                 self.executeMove(next_move)
-            print(f'End state: {self.current_state}')
-            print(f'End reward: {self.current_reward}')
-            print(f'Total reward accumulated {sum(self.reward_history)}')
+                print(self.current_action,self.current_state, self.current_reward, self.stuck_count)
+
+            df = pd.DataFrame(self.previous_data)
+            df['sensor_max'] = df['sensor_data'].apply(lambda x:np.max(x))
+            df['sensor_mean'] = df['sensor_data'].apply(lambda x: np.mean(x))
+            _dict = {}
+            _dict['total_reward'] = sum(self.reward_history)
+            _dict['stuck_count'] = self.stuck_count
+            _dict['sensor_mean'] = np.mean(df['sensor_mean'].values)
+            _dict['sensor_max'] = np.mean(df['sensor_max'].values)
+            print(_dict)
+            data.append(_dict)
         self.rob.stop_world()
         print('Training Finished')
+        with open(filename, 'wb') as f:
+            np.save(f, self.q_table)
+            print('Q table saved: ', filename)
+        df = pd.DataFrame(data)
+        filename = filename.split('.')[0]+'_train'+'.csv'
+        df.to_csv(filename, index=False)
+        print('data saved at ', filename)
 
+    def run(self, iterations, filename):
+        
+        with open(filename,'rb') as f:
+            self.q_table = np.load(f)
+        self.learn=False
+        self.initEnv()
+        for _ in range(iterations):
+            next_move = self.generateGreedyMove()
+            self.executeMove(next_move)
+            print(self.current_action,self.current_state, self.current_reward, self.stuck_count)
 
+        df = pd.DataFrame(self.previous_data)
+        df['sensor_max'] = df['sensor_data'].apply(lambda x:np.max(x))
+        df['sensor_mean'] = df['sensor_data'].apply(lambda x: np.mean(x))
+        _dict = {}
+        _dict['total_reward'] = sum(self.reward_history)
+        _dict['stuck_count'] = self.stuck_count
+        _dict['sensor_mean'] = np.mean(df['sensor_mean'].values)
+        _dict['sensor_max'] = np.mean(df['sensor_max'].values)
+        print(_dict)
+        self.learn=True
+        self.rob.stop_world()
 
