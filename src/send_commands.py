@@ -19,9 +19,9 @@ def terminate_program(signal_number, frame):
         sys.exit(1)
 
 def simulation(rob):
-    agent = Agent(rob=rob, stuck_threshold = 0.05)
-    agent.train(filename = 'scene_1.npy', n_episodes = 2, max_steps = 2)
-    # agent.run(filename = 'scene_1.npy',iterations = 10)
+    agent = Agent(rob=rob, stuck_threshold = 0.075, epsilon=0.15)
+    # agent.train(filename = 'random_1.npy', n_episodes = 39, max_steps = 60, shuffle=True)
+    agent.run(filename = 'random_1.npy',iterations = 30)
     # rob.stop_world()
     # rob.play_simulation()
     # state = State(stuck_threshold=0.05, debug_print=False)
@@ -69,7 +69,7 @@ def main():
 
     # rob = robobo.HardwareRobobo(camera=True).connect(address="192.168.1.7")
     global rob
-    rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
+    rob = robobo.SimulationRobobo('#2').connect(address='127.0.0.1', port=19997)
     
     try:
         simulation(rob)
