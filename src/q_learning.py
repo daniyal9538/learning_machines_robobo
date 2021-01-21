@@ -292,8 +292,9 @@ def run(agent,q,n_episodes,max_steps,
                 reward = agent.current_reward
                 q_value = q.calculateQValue(max_q, old_q, reward)
                 agent.q_table[tuple(old_state)][next_move] = q_value
-                print(reward, new_state, next_move)
-                if agent.rob.collected_food() == max_food:
+                food_collected = agent.rob.collected_food()
+                print(f'reward: {reward}, new_state: {new_state}, next_move: {next_move}, food_collect: {food_collected}')
+                if food_collected == max_food:
                     print('All food collected')
                     break
                 print(r'**********************************')

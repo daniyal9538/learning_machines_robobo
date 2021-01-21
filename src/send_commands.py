@@ -27,7 +27,7 @@ def simulation(rob):
     ## Train agent with specified parameters and save the controller
     # agent.train(filename = 'controller.npy', n_episodes = 39, max_steps = 60, shuffle=False)
     ## Load controller and run
-    run(agent = agent,q= ql,n_episodes = 40, max_steps = 50,max_food = 7, filename = 'food_1.npy')
+    run(agent = agent,q= ql,n_episodes = 40, max_steps = 100,max_food = 7, filename = 'food_1.npy')
 
     rob.stop_world()
 
