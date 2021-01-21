@@ -246,22 +246,5 @@ class Agent:
         with open(filename,'rb') as f:
             self.q_table = np.load(f)
         self.train(n_episodes=1, max_steps=iterations, shuffle=False, filename=None)
-        # self.learn=False
-        # self.initEnv()
-        # for _ in range(iterations):
-        #     next_move = self.generateGreedyMove()
-        #     self.executeMove(next_move)
-        #     print(self.current_action,self.current_state, self.current_reward, self.stuck_count)
 
-        # df = pd.DataFrame(self.previous_data)
-        # df['sensor_max'] = df['sensor_data'].apply(lambda x:np.max(x))
-        # df['sensor_mean'] = df['sensor_data'].apply(lambda x: np.mean(x))
-        # _dict = {}
-        # _dict['total_reward'] = sum(self.reward_history)
-        # _dict['stuck_count'] = self.stuck_count
-        # _dict['sensor_mean'] = np.mean(df['sensor_mean'].values)
-        # _dict['sensor_max'] = np.mean(df['sensor_max'].values)
-        # print(_dict)
-        # self.learn=True
-        # self.rob.stop_world()
 

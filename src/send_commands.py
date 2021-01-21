@@ -1,6 +1,7 @@
 
 from __future__ import print_function
 
+
 import time
 import numpy as np
 import traceback
@@ -12,54 +13,21 @@ import signal
 import prey
 from states import Agent
 from actions import*
-
+from q_learning import *
 def terminate_program(signal_number, frame):
         print("Ctrl-C received, terminating program")
         rob.stop_world()
         sys.exit(1)
 
 def simulation(rob):
-    agent = Agent(rob=rob, stuck_threshold = 0.075, epsilon=0.15)
-    # agent.train(filename = 'random_1.npy', n_episodes = 39, max_steps = 60, shuffle=True)
-    agent.run(filename = 'random_1.npy',iterations = 30)
-    # rob.stop_world()
-    # rob.play_simulation()
-    # state = State(stuck_threshold=0.05, debug_print=False)
-    # for i in range(20):
-    #         # print("robobo is at {}".format(rob.position()))
-    #         action = 0
-    #         selectMove(rob, action=action)
-    #         # selectMove(rob, action=4)
-    #         # time.sleep(5)
-    #         # selectMove(rob, action=6)
-    #         # time.sleep(5)
-    #         # selectMove(rob, action=3)
-    #         # time.sleep(5)
-    #         # selectMove(rob,action=5)
-    #         # hardRight(rob)
-    #         # backward(rob)
-    #         # softLeft(rob)
-            
-    #         # softRight(rob)
-            
-    #         sensor_data = rob.read_irs()[3:]
-    #         # sensor_input = state.createSensorState(sensor_data)
-    #         current_state = {'robot_position':rob.position(),
-    #                         # 'sensor_state':sensor_input,
-    #                         'sensor_data':sensor_data,
-    #                         'action':action
-    #                         }
-    #         state.updateState(**current_state)
-
-
-    #         # print(f'Sensor:{rob.read_irs()}')
-    #         print(f'Robot data: {state.current_data}\nRobot state: {state.current_state}\nReward: {state.current_reward}')
-    #         print(f'state action value in q table: {state.q_table[tuple(state.current_state)]}')
-    #         # if state.current_data['stuck_state']:
-    #         #     print('stuck')
-    #         #     rob.stop_world()
-                
-    #         #     sys.exit(1)
+    ## Initialize agent
+    rob.set_phone_tilt(np.pi/7, 100)
+    agent = Agent(rob=rob)
+    ql = QLearning()
+    ## Train agent with specified parameters and save the controller
+    # agent.train(filename = 'controller.npy', n_episodes = 39, max_steps = 60, shuffle=False)
+    ## Load controller and run
+    run(agent = agent,q= ql,n_episodes = 40, max_steps = 50,max_food = 7, filename = 'food_1.npy')
 
     rob.stop_world()
 
@@ -69,14 +37,17 @@ def main():
 
     # rob = robobo.HardwareRobobo(camera=True).connect(address="192.168.1.7")
     global rob
-    rob = robobo.SimulationRobobo('#2').connect(address='127.0.0.1', port=19997)
+    rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
     
     try:
         simulation(rob)
     except Exception as e:
+        cv2.imshow('img',rob.get_image_front())
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
         print(e)
         traceback.print_exc()
-        rob.stop_world()
+        rob.pause_simulation()
 
     
 
