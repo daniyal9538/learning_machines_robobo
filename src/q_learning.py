@@ -9,7 +9,7 @@ class QLearning:
     def __init__(self, **args):
         self.epsilon = args.get('epsilon', 0.15)
         self.alpha = args.get('alpha',0.3)
-        self.gamma = args.get('gamme', 0.9)
+        self.gamma = args.get('gamma', 0.9)
         self.n_actions = args.get('n_actions', 6)
         
 
@@ -54,7 +54,7 @@ class Agent:
         self.food_consumed = 0
         self.current_reward = 0
         self.reward_history = []
-        self.q_table = args.get('q_table',np.random.rand(4,2,4,4,4,4,4,6))
+        self.q_table = args.get('q_table',np.random.rand(4,2,2,4,4,4,4,4,6))
         # self.full_stuck_count = 0
         self.current_action = None
         self.action_history = []
@@ -163,13 +163,17 @@ class Agent:
         # stuck = self.isStuck()
         # sensor_state = self.createSensorState(sensor_data)
         is_closer = self.isCloser(distance)
+        food_count = self.rob.collected_food()
+        has_eaten = self.hasEaten(food_count)
         return {'sensor_data': sensor_data,
                 'is_food': is_food,
                 'food_heading': food_heading,
                 # 'full_stuck': full_stuck,
                 'sensor_state':sensor_state,
                 'distance':distance,
-                'is_closer':is_closer
+                'is_closer':is_closer,
+                'has_eaten':has_eaten,
+                'food_count':food_count
                 }
 
         
@@ -224,7 +228,7 @@ class Agent:
         # is_closer = self.isCloser()
 
 
-        self.current_state =  [self.current_data['food_heading']]+[self.current_data['is_closer']]+self.current_data['sensor_state']
+        self.current_state =  [self.current_data['food_heading']]+[self.current_data['is_closer']]+[self.current_data['has_eaten']]+self.current_data['sensor_state']
 
 
         
@@ -238,23 +242,44 @@ class Agent:
         self.updateState()
         self.generateRewards()
 
+    def hasEaten(self, food_count):
+        if len(self.data_history) < 1:
+            return 0
+        
+        prev = self.data_history[-1]['food_count']
+        curr = food_count
+        if curr > prev:
+            return 1
+        else:
+            return 0
+
     def generateRewards(self):
         reward = 0
         is_food = self.current_data['is_food']
         if is_food:
+            #reward for seeing food
             reward+=2
+            # reward for seeing food and detecting something
             for i in self.current_data['sensor_state']:
                 _reward = 3/(i+1)
                 reward += _reward
         elif not is_food:
+            #reward for not seeing food
             reward+=-2
+            #reward for not seeing food and detecting something
             for i in self.current_data['sensor_state']:
                 _reward = -3/(i+1)
                 reward += _reward
 
         is_closer=self.current_data['is_closer']
         if is_closer:
-            reward+=2
+            #reward for moving closer to food
+            reward+=3
+
+        has_eaten = self.current_data['has_eaten']
+        if has_eaten:
+            #reward for eating food
+            reward+=5
         # reward = self.current_state[0]*-2
 
         # reward += sum(self.current_state[1:])*-1

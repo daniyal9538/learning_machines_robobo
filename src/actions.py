@@ -23,7 +23,7 @@ def backward(rob,v=10, milliseconds=2500):
     rob.move(-v, -v, milliseconds)
 
 def fastForward(rob, v=20, milliseconds=2500):
-    rob.move(-v, -v, milliseconds)
+    rob.move(v, v, milliseconds)
 
 def forwardLeft(rob):
     rob.move(10, 20, 2250)

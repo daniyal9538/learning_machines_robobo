@@ -23,11 +23,11 @@ def simulation(rob):
     ## Initialize agent
     rob.set_phone_tilt(np.pi/7, 100)
     agent = Agent(rob=rob)
-    ql = QLearning()
+    ql = QLearning(epsilon=0.075)
     ## Train agent with specified parameters and save the controller
     # agent.train(filename = 'controller.npy', n_episodes = 39, max_steps = 60, shuffle=False)
     ## Load controller and run
-    run(agent = agent,q= ql,n_episodes = 40, max_steps = 100,max_food = 7, filename = 'food_1.npy')
+    run(agent = agent,q= ql,n_episodes = 30, max_steps = 125,max_food = 6, filename = 'food_3.npy')
 
     rob.stop_world()
 
@@ -42,12 +42,13 @@ def main():
     try:
         simulation(rob)
     except Exception as e:
+        rob.pause_simulation()
         cv2.imshow('img',rob.get_image_front())
         cv2.waitKey(0)
         cv2.destroyAllWindows()
         print(e)
         traceback.print_exc()
-        rob.pause_simulation()
+        rob.stop_world()
 
     
 
