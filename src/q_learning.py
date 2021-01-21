@@ -54,7 +54,7 @@ class Agent:
         self.food_consumed = 0
         self.current_reward = 0
         self.reward_history = []
-        self.q_table = args.get('q_table',np.random.rand(4,4,4,4,4,4,6))
+        self.q_table = args.get('q_table',np.random.rand(4,2,4,4,4,4,4,6))
         # self.full_stuck_count = 0
         self.current_action = None
         self.action_history = []
@@ -135,7 +135,7 @@ class Agent:
         self.food_consumed = 0
 
         self.rob.play_simulation()
-        # self.rob.play_simulation()
+        self.rob.play_simulation()
         self.updateState()
         
 
@@ -153,7 +153,7 @@ class Agent:
 
         sensor_state = self.createSensorState(sensor_data)
 
-        food_heading = selectHeading(img)
+        food_heading, distance = selectHeading(img)
         # print('@@', food_heading)
         if food_heading == 0:
             is_food = 0
@@ -162,15 +162,28 @@ class Agent:
         # full_stuck = self.isFullStuck()
         # stuck = self.isStuck()
         # sensor_state = self.createSensorState(sensor_data)
-
+        is_closer = self.isCloser(distance)
         return {'sensor_data': sensor_data,
                 'is_food': is_food,
                 'food_heading': food_heading,
                 # 'full_stuck': full_stuck,
-                'sensor_state':sensor_state
+                'sensor_state':sensor_state,
+                'distance':distance,
+                'is_closer':is_closer
                 }
 
         
+    def isCloser(self,distance):
+        if len(self.data_history) < 1:
+            return 0
+        
+        curr = distance
+        prev = self.data_history[-1]['distance']
+        if curr > prev:
+            return 1
+        else:
+            return 0
+
 
     def isFood(self,img):
         result = getContours(img)
@@ -203,14 +216,18 @@ class Agent:
         state = self.generateStateData()
 
 
-        is_food = state.get('is_food', None)
+        # is_food = state.get('is_food', None)
         # full_stuck = state.get('full_stuck', None)
         
         self.current_data = state
-        self.current_state =  [self.current_data['food_heading']]+self.current_data['sensor_state']
-
-
         self.data_history.append(self.current_data)
+        # is_closer = self.isCloser()
+
+
+        self.current_state =  [self.current_data['food_heading']]+[self.current_data['is_closer']]+self.current_data['sensor_state']
+
+
+        
         self.state_history.append(self.current_state)
         # self.generateRewards()
         # self.stuck_count+=stuck
@@ -234,6 +251,10 @@ class Agent:
             for i in self.current_data['sensor_state']:
                 _reward = -3/(i+1)
                 reward += _reward
+
+        is_closer=self.current_data['is_closer']
+        if is_closer:
+            reward+=2
         # reward = self.current_state[0]*-2
 
         # reward += sum(self.current_state[1:])*-1

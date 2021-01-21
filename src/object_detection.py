@@ -16,25 +16,27 @@ def getContours(img):
         img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE
     )
     if not contours:
-        return -inf
-    cnt = contours[closestBlock(contours)]
+        return -inf, -inf
+    
+    index_value, value = closestBlock(contours)
+    cnt = contours[index_value]
     area = cv2.contourArea(cnt)
     # print(area)
     cv2.drawContours(img, cnt, -1, (255, 0, 0), 1)
     M = cv2.moments(cnt)
     if M["m00"] == 0:
-        return -inf
+        return -inf, -inf
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])
     # cv2.circle(img, (cX, cY), 5, (255, 0, 0), -1)
-    return cX
+    return cX, value
 
 
 def closestBlock(contourList):
     yVal = []
     for c in contourList:
         yVal.append(tuple(c[c[:, :, 1].argmax()][0])[1])
-    return yVal.index(max(yVal))
+    return yVal.index(max(yVal)), max(yVal)
 
 
 def checkSide(xCoordinate, img):
@@ -52,7 +54,7 @@ def checkSide(xCoordinate, img):
 def selectHeading(img):
     # print('in select heading')
     mask = cv2.inRange(img, lower_green, upper_green)
-    xCoord = getContours(mask)
+    xCoord, value = getContours(mask)
     if xCoord != -inf:
         
         heading = checkSide(xCoord, img)
@@ -61,7 +63,7 @@ def selectHeading(img):
     else:
         heading = 0
     # print('in heading function', heading)
-    return heading
+    return heading, value
 
 # xCoord = getContours(mask)
 # print(checkSide(xCoord, image))
