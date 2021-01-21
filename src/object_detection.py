@@ -22,6 +22,8 @@ def getContours(img):
     # print(area)
     cv2.drawContours(img, cnt, -1, (255, 0, 0), 1)
     M = cv2.moments(cnt)
+    if M["m00"] == 0:
+        return -inf
     cX = int(M["m10"] / M["m00"])
     cY = int(M["m01"] / M["m00"])
     # cv2.circle(img, (cX, cY), 5, (255, 0, 0), -1)
