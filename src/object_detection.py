@@ -8,6 +8,10 @@ from math import inf
 
 lower_green = np.array([0, 150, 0])
 upper_green = np.array([20, 255, 20])
+lower_red = np.array([0, 0, 100])
+upper_red = np.array([90, 90, 255])
+upper_color=upper_red
+lower_color = lower_red
 # mask = cv2.inRange(image, lower_green, upper_green)
 
 
@@ -53,7 +57,7 @@ def checkSide(xCoordinate, img):
 
 def selectHeading(img):
     # print('in select heading')
-    mask = cv2.inRange(img, lower_green, upper_green)
+    mask = cv2.inRange(img, lower_color, upper_color)
     xCoord, value = getContours(mask)
     if xCoord != -inf:
         

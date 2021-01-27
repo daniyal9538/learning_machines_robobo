@@ -16,24 +16,27 @@ from actions import*
 from q_learning import *
 def terminate_program(signal_number, frame):
         print("Ctrl-C received, terminating program")
+        sys.exit()
         rob.stop_world()
         sys.exit(1)
 
 def simulation(rob):
     ## Initialize agent
-    rob.set_phone_tilt(np.pi/7, 100)
+
+    rob.set_phone_tilt(np.pi/5.5, 100)
     agent = Agent(rob=rob)
     ql = QLearning(epsilon=0.075)
     ## Train agent with specified parameters and save the controller
     # agent.train(filename = 'controller.npy', n_episodes = 39, max_steps = 60, shuffle=False)
     ## Load controller and run
-    run(agent = agent,q= ql,n_episodes = 30, max_steps = 125,max_food = 6, filename = 'food_3.npy')
+    runPredatorPrey(agent = agent,q= ql,n_episodes = 1, max_steps = 10,max_food = 6, 
+                            filename = r'F:\Documents\VU\LM\learning_machines_robobo\food_3.npy', load=True, save=False)
 
     rob.stop_world()
 
 
 def main():
-    signal.signal(signal.SIGINT, terminate_program)
+    # signal.signal(signal.SIGINT, terminate_program)
 
     # rob = robobo.HardwareRobobo(camera=True).connect(address="192.168.1.7")
     global rob
@@ -41,6 +44,7 @@ def main():
     
     try:
         simulation(rob)
+        # test(rob)
     except Exception as e:
         rob.pause_simulation()
         cv2.imshow('img',rob.get_image_front())
@@ -88,7 +92,50 @@ def main():
     
     # # Stopping the simualtion resets the environment
     # rob.stop_world()
+# def startPrey():
+
+#     prey_robot = robobo.SimulationRoboboPrey().connect(address='127.0.0.1', port=19989)
+
+#     prey_controller = prey.Prey(robot=prey_robot, level=2)
+
+#     prey_controller.start()
+#     return(prey_controller, prey_robot)
+
+# def stopPrey(prey_controller, prey_robot):
+#     prey_controller.stop()
+#     prey_controller.join()
+#     prey_robot.disconnect()
+
+
+def test():
+    rob = robobo.SimulationRobobo().connect(address='127.0.0.1', port=19997)
+
+    rob.play_simulation()
+
+    # prey_robot = robobo.SimulationRoboboPrey().connect(address='127.0.0.1', port=19989)
+
+    # prey_controller = prey.Prey(robot=prey_robot, level=2)
+
+    # prey_controller.start()
+
+    prey_controller, prey_robot = startPrey()
+
+    for i in range(10):
+            print("robobo is at {}".format(rob.position()))
+            rob.move(5, 5, 2000)
+    
+    stopPrey(prey_controller, prey_robot)
+    rob.stop_world()
+
+
 
 
 if __name__ == "__main__":
     main()
+    # test()
+
+
+
+
+
+

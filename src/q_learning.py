@@ -4,6 +4,9 @@ from object_detection import selectHeading, getContours
 from actions import *
 from random import uniform, randint
 import pandas as pd 
+import robobo
+import prey
+
 
 class QLearning:
     def __init__(self, **args):
@@ -163,7 +166,8 @@ class Agent:
         # stuck = self.isStuck()
         # sensor_state = self.createSensorState(sensor_data)
         is_closer = self.isCloser(distance)
-        food_count = self.rob.collected_food()
+        # food_count = self.rob.collected_food()
+        food_count = 0
         has_eaten = self.hasEaten(food_count)
         return {'sensor_data': sensor_data,
                 'is_food': is_food,
@@ -210,7 +214,7 @@ class Agent:
                 converted.append(2)
             elif i < self.distance_threshold['far'] and i >= self.distance_threshold['middle']:
                 converted.append(1)
-            elif i < self.distance_threshold['middle'] and i >= self.distance_threshold['near']:
+            elif i < self.distance_threshold['middle']:
                 converted.append(0)
 
         return converted
@@ -292,6 +296,18 @@ class Agent:
         state = tuple(state)
         return self.q_table[state]
 
+    def isCollision(self):
+        sensor_state = self.current_data['sensor_state']
+
+        #if there is anything right in front of sensor, sensor_flag is true
+        sensor_flag = not(all(sensor_state))
+        is_food = self.current_data['is_food']
+
+        if sensor_flag and is_food:
+            return 1
+
+        return 0
+
 
 def run(agent,q,n_episodes,max_steps,
         filename,max_food=7, load=False, save=True):
@@ -317,14 +333,16 @@ def run(agent,q,n_episodes,max_steps,
                 reward = agent.current_reward
                 q_value = q.calculateQValue(max_q, old_q, reward)
                 agent.q_table[tuple(old_state)][next_move] = q_value
-                food_collected = agent.rob.collected_food()
+                # food_collected = agent.rob.collected_food()
+                food_collected = 0
                 print(f'reward: {reward}, new_state: {new_state}, next_move: {next_move}, food_collect: {food_collected}')
                 if food_collected == max_food:
                     print('All food collected')
                     break
                 print(r'**********************************')
             _dict={}
-            _dict['food_collected'] = agent.rob.collected_food() 
+            # _dict['food_collected'] = agent.rob.collected_food() 
+            _dict['food_collected'] = 0
             _dict['total_reward'] = sum(agent.reward_history)
             _dict['steps'] = i
             data.append(_dict)
@@ -339,3 +357,74 @@ def run(agent,q,n_episodes,max_steps,
             filename = filename.split('.')[0]+'_train'+'.csv'
             df.to_csv(filename, index=False)
             print('data saved at ', filename)
+
+
+
+def runPredatorPrey(agent,q,n_episodes,max_steps,
+        filename,max_food=7, load=False, save=True):
+
+        if load:
+            with open(filename,'rb') as f:
+                agent.q_table = np.load(f)
+        data = []
+        for n in range(n_episodes):
+            print(f'Episode {n}')
+            agent.initAgent()
+            print('Starting prey')
+
+            prey_controller, prey_robot = startPrey()
+            print(agent.current_state)
+            for i in range(max_steps):
+                
+                old_state = agent.current_state
+                # print('old_state', old_state)
+                next_move = q.generateMoveFromPolicy(agent.accessQTable(old_state))
+                # print('q table', agent.accessQTable(old_state))
+                # print('move', next_move,)
+                agent.executeMove(next_move)
+                new_state = agent.current_state
+                old_q = agent.accessQTable(old_state)[next_move]
+                max_q = np.max(agent.accessQTable(new_state))
+                reward = agent.current_reward
+                q_value = q.calculateQValue(max_q, old_q, reward)
+                agent.q_table[tuple(old_state)][next_move] = q_value
+                # food_collected = agent.rob.collected_food()
+                food_collected = 0
+                print(f'reward: {reward}, new_state: {new_state}, next_move: {next_move}, Prey caught: {agent.isCollision()}, Is food: {agent.current_data["is_food"]}, {not(all(agent.current_data["sensor_state"]))}')
+                if agent.isCollision():
+                    print('Prey caught')
+                    break
+                print(r'**********************************')
+            stopPrey(prey_controller,prey_robot)
+            _dict={}
+            # _dict['food_collected'] = agent.rob.collected_food() 
+            _dict['food_collected'] = 0
+            _dict['total_reward'] = sum(agent.reward_history)
+            _dict['steps'] = i
+            data.append(_dict)
+            print(_dict)
+        print('Training Finished')
+        if save:
+            with open(filename, 'wb') as f:
+                
+                np.save(f, agent.q_table)
+                print('Q table saved: ', filename)
+            df = pd.DataFrame(data)
+            filename = filename.split('.')[0]+'_train'+'.csv'
+            df.to_csv(filename, index=False)
+            print('data saved at ', filename)
+
+            
+def startPrey():
+
+    prey_robot = robobo.SimulationRoboboPrey().connect(address='127.0.0.1', port=19989)
+    
+    prey_controller = prey.Prey(robot=prey_robot, level=0)
+
+    prey_controller.start()
+    return(prey_controller, prey_robot)
+
+def stopPrey(prey_controller, prey_robot):
+    prey_controller.stop()
+    prey_controller.join()
+    prey_robot.disconnect()
